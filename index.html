@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        margin: auto;
+        position: relative;
+        width: 960px;
+    }
+    
+    path {
+        stroke: #fff;
+        cursor: pointer;
+        stroke-width: 2;
+    }
+    
+    text {
+        font-family: sans-serif;
+        font-size: 12px;
+        pointer-events: none;
+    }
+    
+    path:hover {
+        fill: orange !important;
+    }
+    
+    .psd3Tooltip {
+        position: absolute;
+        max-width: 150px;
+        height: auto;
+        padding: 10px;
+        background-color: white;
+        -webkit-border-radius: 10px;
+        -moz-border-radius: 10px;
+        border-radius: 10px;
+        -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+    }
+    
+    .psd3Hidden {
+        display: none;
+    }
+    
+    .psd3Tooltip p {
+        margin: 0;
+        font-family: sans-serif;
+        font-size: 16px;
+        line-height: 20px;
+    }
+</style>
+<div id="webChartID">
+</div>
+<div id="emailChartID">
+</div>
+<!-- <script src="//d3js.org/d3.v3.min.js"></script> -->
+<script type="text/javascript" src="./d3.js"></script>
+<script>
+    var data = {
+        name: "Web browser",
+        children: [{
+            name: "Chrome",
+            children: [{
+                name: "40",
+                size: 10
+            }, {
+                name: "50.45",
+                size: 2
+            }, {
+                name: "55.1",
+                size: 4
+            }]
+        }, {
+            name: "Microsoft Outlook",
+            children: [{
+                name: "7",
+                size: 2
+            }, {
+                name: "9",
+                size: 5
+            }, {
+                name: "11.0",
+                size: 3
+            }]
+        }, {
+            name: "IE",
+            children: [{
+                name: "7",
+                size: 2
+            }, {
+                name: "9",
+                size: 5
+            }, {
+                name: "11.0",
+                size: 3
+            }]
+        }]
+    }
+
+    var WEB_CHART_ID = 'webChartID',
+        EMAIL_CHART_ID = 'emailChartID';
+    var width = 350,
+        height = 350,
+        donutRadius = 10,
+        radius = (Math.min(width, height) / 2) - 10;
+
+    var formatNumber = d3.format(",d");
+
+    var x = d3.scale.linear()
+        .range([0, 2 * Math.PI]);
+
+    var y = d3.scale.sqrt()
+        .range([0, radius]);
+
+    var color = d3.scale.category20c()
+        .range(["#6b486b", "#a05d56", "#d0743c", "#ff8c00", "#98abc5", "#8a89a6", "#7b6888"]);;
+
+    var partition = d3.layout.partition()
+        .value(function(d) {
+            console.log(d.size);
+            return d.size;
+        });
+
+    var arc = d3.svg.arc()
+        .startAngle(function(d) {
+            return Math.max(0, Math.min(2 * Math.PI, x(d.x)));
+        })
+        .endAngle(function(d) {
+            return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx)));
+        })
+        .innerRadius(function(d) {
+            return Math.max(0, y(d.y));
+        })
+        .outerRadius(function(d) {
+            return Math.max(0, y(d.y + d.dy));
+        });
+
+    // Set heading
+    setHeading(WEB_CHART_ID, 'Do Ha Quoc Thai');
+    setHeading(EMAIL_CHART_ID, 'Hoang Thi Kim Yen');
+
+    // Define svg
+    var web_svg = drawDonutChart(WEB_CHART_ID);
+    var email_svg = drawDonutChart(EMAIL_CHART_ID);
+
+    var web_tooltip = drawTooltip(WEB_CHART_ID);
+    var email_tooltip = drawTooltip(EMAIL_CHART_ID);
+
+    // Draw paths
+    // web_paths = drawPaths(web_svg);
+    // email_paths = drawPaths(email_svg);
+
+    // Draw Arcs
+    var web_arcs = drawArcs(web_svg);
+
+    // Draw arc paths
+    var web_paths = drawPaths(web_arcs, web_svg);
+
+    // Draw label
+    // drawText(web_arcs);
+
+
+
+    // paths.on("click", click(web_svg, d));
+
+    // paths.on("mouseout", _this.mouseout);
+
+    // drawText(WEB_CHART_ID);
+
+    // web_paths.each(storeMetadataWithArc)
+
+    // function storeMetadataWithArc(d) {
+    //     d.path = this;
+    //     d.fill = this.fill;
+    // };
+
+    function drawTooltip(chartID) {
+        var tooltipDiv = d3.select("#" + chartID).append("div")
+            .attr("id", chartID + "Tooltip")
+            .attr("class", "psd3Hidden psd3Tooltip");
+        tooltipDiv.append("p")
+            .append("span")
+            .attr("id", "value")
+            .text("100%");
+
+        return tooltipDiv;
+    }
+
+    function mouseOver(chartID, d) {
+        d3.select("#" + chartID + "Tooltip")
+            .style("left", (d3.event.clientX + window.scrollX) + "px")
+            .style("top", (d3.event.clientY + window.scrollY) + "px")
+            .select("#value")
+            .html("<span>" + d.name + "</span>");
+        d3.select("#" + chartID + "Tooltip").classed("psd3Hidden", false);
+    };
+
+    function mouseOut(d) {
+        d3.select("#" + _this.tooltipId).classed("psd3Hidden", true);
+        d3.select(d.path)
+            .style("fill", d.fill);
+    };
+
+    function setHeading(chartID, headingText) {
+        d3.select("#" + chartID)
+            .append("div")
+            .style("text-align", "center")
+            .style("width", "" + 350 + "px")
+            .style("padding-top", "20px")
+            .style("padding-bottom", "20px")
+            .append("strong")
+            .text(headingText);
+    };
+
+    function drawText(arcs) {
+        arcs.append("text")
+            .transition(200)
+            .duration(200)
+            .attr("transform", function(d) {
+                return "translate(" + arc.centroid(d) + ")";
+            })
+            .attr("dy", ".4em")
+            .attr("text-anchor", "middle")
+            .text(function(d) {
+                return d.name;
+            })
+            .style({
+                fill: '#fff',
+                'font-size': '10px'
+            });
+        return;
+    }
+
+    function drawArcs(svg) {
+        arcs = svg.selectAll("g")
+            .data(partition.nodes(data))
+            .enter()
+            .append("g")
+            .attr("transform",
+                "translate(" + (radius) + "," + (radius) + ")");
+        return arcs;
+    }
+
+    function drawPaths(arcs, svg) {
+        paths = arcs.append("path")
+            .attr("d", arc)
+            .style("fill", function(d) {
+                return color((d.children ? d : d.parent).name);
+            })
+            .on("click", function(d) {
+                click(svg, d);
+                // drawText(arcs);
+            })
+            .on("mouseover", function(d) {
+                mouseOver(WEB_CHART_ID, d);
+            });
+        return paths;
+    }
+
+    function drawDonutChart(chartID) {
+        var svg = d3.select('#' + chartID)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+        // .append("g")
+        // .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")")
+        return svg;
+    }
+
+    function click(svg, d) {
+        svg.transition()
+            .duration(500)
+            .tween("scale", function() {
+                var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
+                    yd = d3.interpolate(y.domain(), [d.y, 1]),
+                    yr = d3.interpolate(y.range(), [d.y ? 20 : 0, radius]);
+                return function(t) {
+                    x.domain(xd(t));
+                    y.domain(yd(t)).range(yr(t));
+                };
+            })
+            .selectAll("path")
+            .attrTween("d", function(d) {
+                return function() {
+                    return arc(d);
+                };
+            })
+            .selectAll("text").remove();
+    }
+
+    d3.select(self.frameElement).style("height", height + "px");
+
+    // data = [{
+    //     noOfColleges: 25,
+    //     place: "Maharashtra",
+    //     drilldown: [{
+    //         noOfColleges: 15,
+    //         place: "Pune",
+    //         drilldown: [{
+    //             noOfColleges: 10,
+    //             place: "Yerawada"
+    //         }, {
+    //             noOfColleges: 5,
+    //             place: "Kothrud"
+    //         }]
+    //     }, {
+    //         noOfColleges: 10,
+    //         place: "Mumbai",
+    //         drilldown: [{
+    //             noOfColleges: 8,
+    //             place: "Bandra",
+    //             drilldown: [{
+    //                 noOfColleges: 3,
+    //                 place: "Turner Road"
+    //             }, {
+    //                 noOfColleges: 5,
+    //                 place: "Perry Road"
+    //             }]
+    //         }, {
+    //             noOfColleges: 2,
+    //             place: "Varali"
+    //         }]
+    //     }]
+    // }, {
+    //     noOfColleges: 50,
+    //     place: "Gujarat",
+    //     drilldown: [{
+    //         noOfColleges: 20,
+    //         place: "Surat"
+    //     }, {
+    //         noOfColleges: 30,
+    //         place: "Rajkot",
+    //         drilldown: [{
+    //             noOfColleges: 12,
+    //             place: "Patan",
+    //         }, {
+    //             noOfColleges: 18,
+    //             place: "Modhera",
+    //         }]
+    //     }, {
+    //         noOfColleges: 4,
+    //         place: "Godhra"
+    //     }]
+    // }, {
+    //     noOfColleges: 20,
+    //     place: "MP",
+    //     drilldown: [{
+    //         noOfColleges: 4,
+    //         place: "Indore",
+    //         drilldown: [{
+    //             place: "Devas",
+    //             noOfColleges: 2,
+    //         }, {
+    //             place: "Dhar",
+    //             noOfColleges: 2,
+    //         }]
+    //     }, {
+    //         noOfColleges: 5,
+    //         place: "Bhopal"
+    //     }, {
+    //         noOfColleges: 8,
+    //         place: "Ujjain",
+    //         drilldown: [{
+    //             place: "Shajapur",
+    //             noOfColleges: 2,
+    //         }, {
+    //             place: "Ratlam",
+    //             noOfColleges: 6,
+    //         }]
+    //     }, {
+    //         noOfColleges: 3,
+    //         place: "Sachi"
+    //     }]
+    // }];
+
+    // var config = {
+    //     width: 400,
+    //     height: 400,
+    //     containerId: WEB_CHART_ID,
+    //     value: "noOfColleges",
+    //     inner: "drilldown",
+    //     label: function(d) {
+    //         return d.data.place + ":" + d.data.noOfColleges;
+    //     },
+    //     tooltip: function(d) {
+    //         return "<p>There are " + d.noOfColleges + " medical colleges in " + d.place + ".</p>";
+    //     },
+    //     transition: "linear",
+    //     transitionDuration: 1000,
+    //     donutRadius: 20,
+    //     gradient: false,
+    //     colors: d3.scale.category20(),
+    //     labelColor: "black",
+    //     drilldownTransition: "linear",
+    //     drilldownTransitionDuration: 0,
+    //     stroke: "white",
+    //     strokeWidth: 2,
+    //     highlightColor: "orange",
+    //     rotateLabel: false,
+    //     zoomStack: []
+    // };
+
+    // drawPie(data, WEB_CHART_ID);
+    // drawPie(data, EMAIL_CHART_ID);
+
+    // function findMaxDepth(dataset) {
+    //     if (dataset === null || dataset === undefined || dataset.length < 1) {
+    //         return 0;
+    //     }
+
+    //     var currentLevel;
+    //     var maxOfInner = 0;
+    //     for (var i = 0; i < dataset.length; i++) {
+    //         var maxInnerLevel = findMaxDepth(dataset[i][config.inner]);
+    //         if (maxOfInner < maxInnerLevel) {
+    //             maxOfInner = maxInnerLevel;
+    //         }
+    //     }
+    //     currentLevel = 1 + maxOfInner;
+    //     return currentLevel;
+    // };
+
+    // function customArcTween(d) {
+    //     var start = {
+    //         startAngle: d.startAngle,
+    //         endAngle: d.startAngle
+    //     };
+    //     var interpolate = d3.interpolate(start, d);
+    //     return function(t) {
+    //         return d.arc(interpolate(t));
+    //     };
+    // };
+
+    // function textTitle(d) {
+    //     return d.data[config.value];
+    // };
+
+    // function drawPie(dataset, chartID) {
+    //     if (dataset === null || dataset === undefined || dataset.length < 1) {
+    //         return;
+    //     }
+
+    //     var arcIndex = 0;
+    //     var svg = d3.select("#" + chartID)
+    //         .append("svg")
+    //         .attr("id", chartID + "_svg")
+    //         .attr("width", config.width)
+    //         .attr("height", config.height);
+
+    //     tooltipId = chartID + "_tooltip";
+    //     var tooltipDiv = d3.select("#" + chartID).append("div")
+    //         .attr("id", tooltipId)
+    //         .attr("class", "psd3Hidden psd3Tooltip");
+    //     tooltipDiv.append("p")
+    //         .append("span")
+    //         .attr("id", "value")
+    //         .text("100%");
+
+    //     // to contain pie cirlce
+    //     var radius;
+    //     if (config.width > config.height) {
+    //         radius = config.width / 2;
+    //     } else {
+    //         radius = config.height / 2;
+    //     }
+    //     var innerRadius = config.donutRadius;
+    //     var maxDepth = findMaxDepth(dataset);
+
+    //     var outerRadius = innerRadius + (radius - innerRadius) / maxDepth;
+    //     var originalOuterRadius = outerRadius;
+    //     var radiusDelta = outerRadius - innerRadius;
+    //     draw(chartID, svg, radius, dataset, dataset, dataset.length, innerRadius, outerRadius, radiusDelta, 0, 360 * 22 / 7 / 180, [0, 0], arcIndex);
+    // };
+
+    // function draw(chartID, svg, totalRadius, dataset, originalDataset, originalDatasetLength, innerRadius, outerRadius, radiusDelta, startAngle, endAngle, parentCentroid, arcIndex) {
+    //     if (dataset === null || dataset === undefined || dataset.length < 1) {
+    //         return;
+    //     }
+
+    //     function textText(d) {
+    //         return config.label(d);
+    //     };
+
+    //     var pie = d3.layout.pie();
+    //     pie.sort(null);
+    //     pie.value(function(d) {
+    //         return d[config.value];
+    //     });
+    //     pie.startAngle(startAngle)
+    //         .endAngle(endAngle);
+
+    //     var values = [];
+    //     for (var i = 0; i < dataset.length; i++) {
+    //         values.push(dataset[i][config.value]);
+    //     }
+    //     //console.log(values);
+
+    //     var dblclick = function(d) {
+    //         reDrawPie(d, originalDataset, chartID);
+    //     };
+
+    //     var arc = d3.svg.arc().innerRadius(innerRadius)
+    //         .outerRadius(outerRadius);
+    //     //Set up groups
+    //     arcIndex = arcIndex + 1;
+
+    //     var clazz = "arc" + arcIndex;
+
+    //     var storeMetadataWithArc = function(d) {
+    //         d.path = this;
+    //         d.fill = this.fill;
+    //         d.arc = arc;
+    //         d.length = dataset.length;
+    //     };
+
+    //     var arcs = svg.selectAll("g." + clazz)
+    //         .data(pie(dataset))
+    //         .enter()
+    //         .append("g")
+    //         .attr("class", "arc " + clazz)
+    //         .attr("transform",
+    //             "translate(" + (totalRadius) + "," + (totalRadius) + ")")
+    //         .on("dblclick", dblclick);
+
+    //     var gradient = svg.append("svg:defs")
+    //         .append("svg:linearGradient")
+    //         .attr("id", "gradient_" + arcIndex)
+    //         .attr("x1", "0%")
+    //         .attr("y1", "0%")
+    //         .attr("x2", "100%")
+    //         .attr("y2", "100%")
+    //         .attr("spreadMethod", "pad");
+
+    //     var startColor, endColor;
+    //     if (config.gradient) {
+    //         var index = 2 * arcIndex;
+    //         var endIndex = index + 1;
+
+    //         startColor = config.colors(index);
+    //         endColor = config.colors(endIndex);
+    //     } else {
+    //         startColor = endColor = config.colors(arcIndex);
+    //     }
+
+    //     gradient.append("svg:stop")
+    //         .attr("offset", "0%")
+    //         .attr("stop-color", startColor)
+    //         .attr("stop-opacity", 1);
+
+    //     gradient.append("svg:stop")
+    //         .attr("offset", "100%")
+    //         .attr("stop-color", endColor)
+    //         .attr("stop-opacity", 1);
+
+    //     //Draw arc paths
+    //     var paths = arcs.append("path")
+    //         .attr("fill", "url(#gradient_" + arcIndex + ")")
+    //         .style("stroke", config.stroke)
+    //         .style("stroke-width", config.strokeWidth);
+
+    //     // paths.on("mouseover", _this.mouseover);
+
+    //     // paths.on("mouseout", _this.mouseout);
+
+    //     paths.each(storeMetadataWithArc);
+
+    //     paths.transition()
+    //         .duration(config.transitionDuration)
+    //         .delay(config.transitionDuration * (arcIndex - 1))
+    //         .ease(config.transition)
+    //         .attrTween("d", customArcTween);
+
+    //     //Labels
+    //     var texts = arcs.append("text")
+    //         .attr("x", function() {
+    //             return parentCentroid[0];
+    //         })
+    //         .attr("y", function() {
+    //             return parentCentroid[1];
+    //         })
+    //         .transition()
+    //         .ease(config.transition)
+    //         .duration(config.transitionDuration)
+    //         .delay(config.transitionDuration * (arcIndex - 1))
+    //         .attr("transform", function(d) {
+    //             var a = [];
+    //             a[0] = arc.centroid(d)[0] - parentCentroid[0];
+    //             a[1] = arc.centroid(d)[1] - parentCentroid[1];
+    //             var rotate = "";
+    //             if (config.rotateLabel === true) {
+    //                 var rotateAngle = (d.endAngle + d.startAngle) / 2 * (180 / Math.PI) + 90;
+    //                 //console.log("rotateAngle = " + rotateAngle);
+    //                 var b = [];
+    //                 b[0] = parentCentroid[0];
+    //                 b[1] = parentCentroid[1];
+    //                 rotate = "rotate( " + rotateAngle + ", " + b + ")";
+    //             }
+    //             return "translate(" + a + ")" + rotate;
+    //         })
+    //         .attr("text-anchor", "middle")
+    //         .text(textText)
+    //         .style("fill", config.labelColor)
+    //         .attr("title", textTitle);
+
+    //     for (var j = 0; j < dataset.length; j++) {
+    //         if (dataset[j][config.inner] !== undefined) {
+    //             draw(chartID, svg, totalRadius, dataset[j][config.inner], originalDataset, originalDatasetLength, innerRadius + radiusDelta, outerRadius + radiusDelta, radiusDelta, paths.data()[j].startAngle, paths.data()[j].endAngle, arc.centroid(paths.data()[j]), arcIndex);
+    //         }
+    //     }
+    // };
+
+    // function reDrawPie(d, ds, chartID) {
+    //     var tmp = [];
+    //     // d3.select("#" + _this.tooltipId).remove();
+    //     d3.select("#" + chartID + "_svg") //.remove();
+    //         .transition()
+    //         .ease(config.drilldownTransition)
+    //         .duration(config.drilldownTransitionDuration)
+    //         .style("height", 0)
+    //         .remove()
+    //         .each("end", function() {
+    //             if (d.length == 1) {
+    //                 tmp = config.zoomStack.pop();
+    //             } else {
+    //                 tmp.push(d.data);
+    //                 config.zoomStack.push(ds);
+    //             }
+
+    //             drawPie(tmp);
+    //         });
+    // };
+</script>
